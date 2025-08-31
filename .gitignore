@@ -1,1 +1,3 @@
-clean_train.csv
+clean_train.csv 
+clean_test.csv
+solution_linear_regression.csv
