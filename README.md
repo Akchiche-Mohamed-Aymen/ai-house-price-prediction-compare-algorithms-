@@ -20,7 +20,7 @@ It includes data cleaning, preprocessing, model training, and evaluation using m
 
 Clone the repository:
 ```bash
-git clone https://github.com/Akchiche-Mohamed-Aymen/ai-house-price-prediction-compare-algorithms
+git clone https://github.com/Akchiche-Mohamed-Aymen/ai-house-price-prediction-compare-algorithms.git
 ```
 Go to project folder
 ```
