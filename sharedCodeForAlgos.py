@@ -3,12 +3,11 @@ from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler , OneHotEncoder
-from sklearn.metrics import r2_score , mean_squared_error 
+from sklearn.metrics import r2_score , root_mean_squared_error , mean_absolute_percentage_error  
 import pandas as pd
 from utils import target 
 import json
-from numpy import log
-from math import sqrt
+from numpy import log , exp
 
 
 def get_columns():
@@ -45,7 +44,7 @@ def create_model(algo):
         ("regressor" , algo)
     ])
     X_train , X_test ,y_train , y_test = train_test_split(X , y ,test_size = 0.3 , shuffle = True , random_state= 42)
-    model_pipe.fit(X_train , y_train)
+    model_pipe.fit(X_train ,log(y_train))
     cls = model_pipe.named_steps["regressor"].__class__.__name__
     save_solution(model_pipe , cols , f"sol_with_{cls}.csv")
     return model_pipe , X_train , X_test ,y_train , y_test
@@ -64,14 +63,16 @@ def save_solution(model_pipe , cols , fname):
         
 def evaluate_model( y_pred_train ,y_train ,y_pred_test ,  y_test):
     evaluate_performance  = {}
-    r2 , mse = r2_score(y_train , y_pred_train) , mean_squared_error(log(y_train) , log(y_pred_train))
+    r2 , mse = r2_score(y_train , exp(y_pred_train)) , root_mean_squared_error(log(y_train) , y_pred_train)
     evaluate_performance["min_train"] =[ min(y_train)]
     evaluate_performance["max_train"] = [max(y_train)]
     evaluate_performance["min_test"] = [min(y_test)]
     evaluate_performance["max_test"] = [max(y_test)]
     evaluate_performance["r2_score_train"] = [round(r2 , 3)]
-    evaluate_performance["log_rmse_train"] = [round(sqrt(mse) , 3)]
-    r2 , mse = r2_score(y_test , y_pred_test) , mean_squared_error(y_test , y_pred_test)
+    evaluate_performance["log_rmse_train"] = [round(mse , 3)]
+    evaluate_performance["MAPE_train"] = [round(mean_absolute_percentage_error(y_train , exp(y_pred_train)) , 3)]
+    r2 , mse = r2_score(y_test , exp(y_pred_test)) , root_mean_squared_error(log(y_test) , y_pred_test )
     evaluate_performance["r2_score_test"] = [round(r2 , 3)]
-    evaluate_performance["log_rmse_test"] = [round(sqrt(mse) , 3)]
+    evaluate_performance["log_rmse_test"] = [round(mse , 3)]
+    evaluate_performance["MAPE_test"] = [round(mean_absolute_percentage_error(y_test , exp(y_pred_test)) , 3)]
     return evaluate_performance

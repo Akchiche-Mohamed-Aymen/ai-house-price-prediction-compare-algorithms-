@@ -1,0 +1,2 @@
+,min_train,max_train,min_test,max_test,r2_score_train,log_rmse_train,r2_score_test,log_rmse_test,MAPE_train,MAPE_test
+0,34900,745000,35311,755000,0.806,0.152,0.809,0.166,19529.954,21633.903
