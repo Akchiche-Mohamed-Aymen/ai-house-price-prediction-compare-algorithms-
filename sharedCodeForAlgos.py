@@ -1,4 +1,5 @@
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV
+
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
@@ -8,7 +9,13 @@ import pandas as pd
 from utils import target 
 import json
 from numpy import log , exp
+from sklearn.metrics import make_scorer
 
+def log_rmse(y_true, y_pred):
+    # y_true and y_pred are already in log-space
+    rmse = root_mean_squared_error(log(y_true), y_pred)
+    return rmse
+log_rmse_scorer = make_scorer(log_rmse, greater_is_better=False)
 
 def get_columns():
     try:
@@ -26,28 +33,59 @@ def create_pipelines():
         ("encoder" , OneHotEncoder(handle_unknown = 'ignore'))
     ])
     return  num_pipe ,  cat_pipe
-def create_model(algo):
+def create_model(algo, param_grid=None):
     cols = get_columns()
     cols.remove(target)
-    df = pd.read_csv('clean_train.csv')
+    
+    # Load data
+    df = pd.read_csv("clean_train.csv")
     y = df[target]
     X = df[cols]
-    num_cols = X.select_dtypes(include=["int32" , "int64" , "float64"]).columns
+    
+    # Separate numeric & categorical columns
+    num_cols = X.select_dtypes(include=["int32", "int64", "float64"]).columns
     cat_cols = X.select_dtypes(include=["object"]).columns
-    num_pipe ,  cat_pipe = create_pipelines()
+    
+    # Create preprocessing pipelines
+    num_pipe, cat_pipe = create_pipelines()
+    
     prepocessor = ColumnTransformer([
-        ("num" , num_pipe , num_cols),
-        ("cat" , cat_pipe , cat_cols)
-        ])
-    model_pipe = Pipeline([
-        ('prepocessor' , prepocessor),
-        ("regressor" , algo)
+        ("num", num_pipe, num_cols),
+        ("cat", cat_pipe, cat_cols)
     ])
-    X_train , X_test ,y_train , y_test = train_test_split(X , y ,test_size = 0.3 , shuffle = True , random_state= 42)
-    model_pipe.fit(X_train ,log(y_train))
-    cls = model_pipe.named_steps["regressor"].__class__.__name__
-    save_solution(model_pipe , cols , f"sol_with_{cls}.csv")
-    return model_pipe , X_train , X_test ,y_train , y_test
+    
+    # Full pipeline
+    pipe = Pipeline([
+        ("prepocessor", prepocessor),
+        ("regressor", algo)
+    ])
+    
+    # Train-test split
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.3, shuffle=True, random_state=42
+    )
+    
+    # If no param_grid → normal fit
+    if param_grid is None:
+        pipe.fit(X_train, log(y_train))
+        cls = pipe.named_steps["regressor"].__class__.__name__
+        save_solution(pipe, cols, f"sol_with_{cls}.csv")
+        return pipe, X_train, X_test, y_train, y_test
+    
+    # If param_grid is given → GridSearchCV
+    grid = GridSearchCV(
+        estimator=pipe,
+        param_grid=param_grid,
+        cv=5,
+        scoring= "r2"
+    )
+    grid.fit(X_train, log(y_train))
+    
+    cls = grid.best_estimator_.named_steps["regressor"].__class__.__name__
+    save_solution(grid.best_estimator_, cols, f"sol_with_{cls}_grid.csv")
+    
+    return grid, X_train, X_test, y_train, y_test
+
 
 def save_solution(model_pipe , cols , fname):
     try:
