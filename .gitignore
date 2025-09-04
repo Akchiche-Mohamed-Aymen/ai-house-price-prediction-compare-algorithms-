@@ -1,7 +1,4 @@
 clean_train.csv 
 clean_test.csv
-
-
 sol_with_KNeighborsRegressor_grid.csv
-
 sol_with_LinearRegression.csv
